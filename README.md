@@ -43,15 +43,13 @@ entrada → obtenerError ──(sin errores)──→ FIN
 
 ## Archivos
 
-Organizados igual que el ejemplo `sarah-graph` de la clase:
-
-| Archivo | Equivalente en `sarah-graph` | Contenido |
-|---|---|---|
-| `src/state.ts` | `state.py` | El State |
-| `src/tools.ts` | `tools.py` | Las tools |
-| `src/nodes.ts` | `nodes.py` | Los 6 nodos |
-| `src/graph.ts` | `graph.py` + `routing.py` | Las bifurcaciones y el armado del grafo |
-| `src/main.ts` | `main.py` | Programa principal |
+|Archivo | Contenido |
+|---|---|
+| `state.py` | El State |
+| `tools.py` | Las tools |
+| `nodes.py` | 6 nodos |
+| `graph.py` + `routing.py` | Las bifurcaciones y el armado del grafo |
+| `main.py` | Programa principal |
 
 ## Guardrails implementados
 
