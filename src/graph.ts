@@ -2,9 +2,9 @@
  * graph.ts — Arma el workflow con LangGraph.
  *
  *  entrada → obtenerError ──(sin errores)──→ FIN
- *                 └→ construirGrafo → seleccionarArchivos → revisionHumana
- *                                                              ├─ aprueba  → guardarPaquete → FIN
- *                                                              └─ rechaza  → FIN
+ *                 └→ construirGrafo → seleccionarArchivos → explicarArchivos → revisionHumana
+ *                                                                                    ├─ aprueba → guardarPaquete → FIN
+ *                                                                                    └─ rechaza → FIN
  */
 import { END, START, StateGraph } from "@langchain/langgraph";
 import * as nodes from "./nodes.js";
@@ -32,6 +32,7 @@ export const graph = new StateGraph(ContextFitState)
   .addNode("obtenerError", nodes.obtenerError)
   .addNode("construirGrafo", nodes.construirGrafo)
   .addNode("seleccionarArchivos", nodes.seleccionarArchivos)
+  .addNode("explicarArchivos", nodes.explicarArchivos)
   .addNode("revisionHumana", nodes.revisionHumana)
   .addNode("guardarPaquete", nodes.guardarPaquete)
 
@@ -43,7 +44,8 @@ export const graph = new StateGraph(ContextFitState)
     sin_error: END,
   })
   .addEdge("construirGrafo", "seleccionarArchivos")
-  .addEdge("seleccionarArchivos", "revisionHumana")
+  .addEdge("seleccionarArchivos", "explicarArchivos")
+  .addEdge("explicarArchivos", "revisionHumana")
   .addConditionalEdges("revisionHumana", routeRevision, {
     aprobado: "guardarPaquete",
     rechazado: END,

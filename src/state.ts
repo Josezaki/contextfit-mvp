@@ -20,21 +20,22 @@ export interface ArchivoContexto {
   motivo: "semilla" | "importa" | "importado_por"; // por qué entró
   tokens: number;
   contenido: string;
+  descripcion?: string; // la escribe el LLM pequeño (nodo 5)
 }
 
 export const ContextFitState = Annotation.Root({
-  carpeta: Annotation<string>(), // proyecto a analizar
-  presupuestoTokens: Annotation<number>(), // tamaño máximo del paquete
+  carpeta: Annotation<string>(), // Nodo 1: proyecto a analizar
+  presupuestoTokens: Annotation<number>(), // Configuracion/CLI: tamano maximo del paquete
 
-  error: Annotation<ErrorTS | null>(), // error que se va a resolver
-  grafo: Annotation<Record<string, string[]>>(), // archivo → archivos que importa
+  error: Annotation<ErrorTS | null>(), // Nodo 2: error que se va a resolver
+  grafo: Annotation<Record<string, string[]>>(), // Nodo 3: archivo -> archivos que importa
 
-  paquete: Annotation<ArchivoContexto[]>(), // archivos seleccionados
-  excluidos: Annotation<string[]>(), // conectados, pero no cupieron
-  tokensUsados: Annotation<number>(),
+  paquete: Annotation<ArchivoContexto[]>(), // Nodos 4, 5 y 6: archivos seleccionados y descritos
+  excluidos: Annotation<string[]>(), // Nodo 4: archivos conectados, pero que no cupieron
+  tokensUsados: Annotation<number>(), // Nodo 4: tamano actual del paquete
 
-  aprobado: Annotation<boolean>(), // decisión del desarrollador
-  rutaPaquete: Annotation<string>(), // dónde se guardó el paquete aprobado
+  aprobado: Annotation<boolean>(), // Nodo 6: decision del desarrollador
+  rutaPaquete: Annotation<string>(), // Nodo 7: donde se guardo el paquete aprobado
 });
 
 export type State = typeof ContextFitState.State;

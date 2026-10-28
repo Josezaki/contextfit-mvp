@@ -7,7 +7,16 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import type { ArchivoContexto, State } from "./state.js";
-import { construirGrafo as toolConstruirGrafo, contarTokens, ejecutarTsc, esArchivoSensible, leerArchivo, obtenerVecinos } from "./tools.js";
+import {
+  construirGrafo as toolConstruirGrafo,
+  contarTokens,
+  ejecutarTsc,
+  esArchivoSensible,
+  explicarArchivo,
+  leerArchivo,
+  OLLAMA_MODELO,
+  obtenerVecinos,
+} from "./tools.js";
 
 // ─────────────────────────────────────────────
 // NODO 1 — Entrada: revisa que la carpeta exista
@@ -82,7 +91,30 @@ export function seleccionarArchivos(state: State) {
 }
 
 // ─────────────────────────────────────────────
-// NODO 5 — Revisión humana
+// NODO 5 — Explicar archivos con el LLM pequeño (Ollama)
+// Agrega una descripción breve a cada archivo del paquete.
+// Si Ollama no está disponible, el flujo sigue sin descripciones.
+// ─────────────────────────────────────────────
+
+export async function explicarArchivos(state: State) {
+  console.log(`
+Describiendo los archivos con ${OLLAMA_MODELO}...`);
+  const paquete: ArchivoContexto[] = [];
+
+  for (const archivo of state.paquete) {
+    try {
+      const descripcion = await explicarArchivo(archivo.ruta, archivo.contenido, state.error!);
+      paquete.push({ ...archivo, descripcion });
+    } catch {
+      console.log("El LLM pequeño no está disponible (¿está abierto Ollama?). Se sigue sin descripciones.");
+      return {}; // no cambia nada en el state
+    }
+  }
+  return { paquete };
+}
+
+// ─────────────────────────────────────────────
+// NODO 6 — Revisión humana
 //
 // GUARDRAIL 1 — Aprobación humana: nada se guarda ni se envía sin que el
 // desarrollador vea el paquete y lo apruebe.
@@ -96,10 +128,14 @@ export async function revisionHumana(state: State) {
   console.log(`\nSe enviaría (~${state.tokensUsados} de ${state.presupuestoTokens} tokens):`);
   for (const archivo of state.paquete) {
     console.log(`  • ${archivo.ruta}  (${archivo.motivo}, ~${archivo.tokens} tokens)`);
+    if (archivo.descripcion) console.log(`      [IA] ${archivo.descripcion.replace(/\n/g, " ")}`);
   }
   if (state.excluidos.length > 0) {
     console.log("\nNo cupieron en el presupuesto:");
     for (const ruta of state.excluidos) console.log(`  ◦ ${ruta}`);
+  }
+  if (state.paquete.some((a) => a.descripcion)) {
+    console.log("\nLas líneas [IA] las generó un modelo de lenguaje: pueden tener errores.");
   }
 
   const terminal = createInterface({ input: process.stdin, output: process.stdout });
@@ -110,7 +146,7 @@ export async function revisionHumana(state: State) {
 }
 
 // ─────────────────────────────────────────────
-// NODO 6 — Guardar paquete aprobado
+// NODO 7 — Guardar paquete aprobado
 // Lo guarda como JSON. En el diseño completo, aquí se enviaría al LLM externo.
 // ─────────────────────────────────────────────
 
