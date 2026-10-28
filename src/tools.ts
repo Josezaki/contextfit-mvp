@@ -2,7 +2,6 @@
  * tools.ts — Herramientas que usan los nodos.
  *
  * En ContextFit ningún LLM decide qué tool usar: cada nodo llama a la que necesita.
- * Por eso son funciones normales (no usan @tool ni ToolNode como en Sarah).
  * Todas son de solo lectura: ninguna modifica el proyecto.
  */
 import { spawnSync } from "node:child_process";
@@ -94,4 +93,50 @@ export function leerArchivo(carpeta: string, ruta: string): string {
 
 export function contarTokens(texto: string): number {
   return Math.ceil(texto.length / 4);
+}
+
+// ─────────────────────────────────────────────
+// TOOL explicar_archivo
+// Le pide a un LLM pequeño que corre en el computador (Ollama) una descripción
+// breve de un archivo, para que el desarrollador entienda el paquete al revisarlo.
+// El código no sale del computador.
+//
+// GUARDRAIL 5 — Descripciones ancladas al código: el prompt le pide al modelo
+// describir solo lo que está en el código y no inventar. Un guardrail de prompt
+// solo reduce el riesgo; por eso las descripciones se muestran marcadas con [IA].
+// ─────────────────────────────────────────────
+
+const OLLAMA_URL = "http://localhost:11434";
+export const OLLAMA_MODELO = "qwen2.5-coder:1.5b";
+
+const PROMPT_SISTEMA = `Eres un asistente que resume archivos de código TypeScript.
+Reglas:
+1. Describe SOLO lo que se ve en el código entregado. No inventes.
+2. Si no se puede saber qué hace algo, escribe: "No se puede determinar a partir del código".
+3. Responde en español, en máximo 2 líneas.
+4. No propongas soluciones al error.`;
+
+export async function explicarArchivo(ruta: string, codigo: string, error: ErrorTS): Promise<string> {
+  const prompt = `Error que se quiere corregir: ${error.codigo} en ${error.archivo}: ${error.mensaje}
+
+Archivo: ${ruta}
+${codigo}
+
+Describe qué hace este archivo y si se relaciona con el error.`;
+
+  const respuesta = await fetch(`${OLLAMA_URL}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: OLLAMA_MODELO,
+      system: PROMPT_SISTEMA,
+      prompt,
+      stream: false,
+      options: { temperature: 0 }, // misma entrada → misma respuesta
+    }),
+  });
+  if (!respuesta.ok) throw new Error(`Ollama respondió ${respuesta.status}`);
+
+  const datos = (await respuesta.json()) as { response: string };
+  return datos.response.trim();
 }
